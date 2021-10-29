@@ -15,6 +15,16 @@ export const Outro = ({ showOutro }) => {
                         Luysport
                     </a>
                 </p>
+                <p>
+                    Story And Interaction made by{' '}
+                    <a 
+                        target="_blank"
+                        href="https://level30wizards.com"
+                        rel="noreferrer"
+                    >
+                        Emiel - Level30Wizards
+                    </a>
+                </p>
             </div>
             <div id="controls">
                 <p>Controls : </p>
