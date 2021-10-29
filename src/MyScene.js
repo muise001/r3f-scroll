@@ -1,90 +1,26 @@
-import { OrbitControls, useScroll } from '@react-three/drei';
+import { OrbitControls, Text, useScroll } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
-import { useControls } from 'leva';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useKey } from 'react-use';
-import { applyAnimationToTimelineLine } from '../src/helpers/lerp';
+import { applyAnimationToTimelineLine, handleIntro } from '../src/helpers/lerp';
+import { timelineFragments } from './helpers/timeline';
 import Island from './Island';
 
-const timelineFragments = [
-    {
-        duration: 1 / 10,
-        position: [
-            {
-                x: 3.287051563715002,
-                y: 0.7618830587647809,
-                z: 2.8792822437156245,
-            },
-            {
-                x: 2,
-                y: -1,
-                z: -3,
-            },
-        ],
-        lookAt: [
-            { x: 2, y: -1, z: -4.5 },
-            { x: 2, y: -1, z: -4.5 },
-        ],
-    },
-    {
-        duration: 1 / 10,
-        position: [
-            {
-                x: 2,
-                y: -1,
-                z: -3,
-            },
-            {
-                x: 3,
-                y: -1.4,
-                z: -6,
-            },
-        ],
-        lookAt: [
-            { x: 2, y: -1, z: -4.5 },
-            { x: 2, y: -1, z: -4.5 },
-        ],
-    },
-    {
-        duration: 3 / 10,
-        position: [
-            {
-                x: 3,
-                y: -1.4,
-                z: -6,
-            },
-            { x: -4, y: 0, z: 2 },
-        ],
-        lookAt: [
-            { x: 2, y: -1, z: -4.5 },
-            { x: 0, y: -0, z: 0 },
-        ],
-    },
-    {
-        duration: 3 / 10,
-        position: [
-            { x: -4, y: 0, z: 2 },
-            { x: 2, y: 0, z: 7 },
-        ],
-        lookAt: [
-            { x: 0, y: -0, z: 0 },
-            { x: 2, y: -1, z: -4.5 },
-        ],
-    },
-];
-
-export function MyScene({ canvasRef }) {
+export function MyScene({ setShowOutro }) {
+    // Drei hooks
     const data = useScroll();
-    const { camera, viewport } = useThree();
-    const [mouseCoords, setMouseCoords] = useState({});
+    const { camera } = useThree();
+
+    // Text Reft
+    const textGroupRef = useRef();
+    const introGroupRef = useRef();
+
+    // States
+    const [currentText, setCurrentText] = useState();
     const [orbitControlsVis, setOrbitControlsVis] = useState(false);
 
+    // Request animation Frame
     useFrame(({ mouse }) => {
-        setMouseCoords({
-            x: (mouse.x * viewport.width) / 2,
-            y: (mouse.y * viewport.height) / 2,
-        });
-
         if (!orbitControlsVis) {
             let completeAnimationProgress = 0;
             // Maakt modulair de timelineProgressPerFragment array aan = [data.range(1/3, 1/3), data.range(1/3, 1/3)]
@@ -99,6 +35,7 @@ export function MyScene({ canvasRef }) {
                 }
             );
 
+            // Je krijgt een error als je meer durations hebt, dan tijd
             completeAnimationProgress > 1 &&
                 console.error(
                     `completeAnimationProgress cant be bigger than one! and is currently ${completeAnimationProgress}`
@@ -114,6 +51,22 @@ export function MyScene({ canvasRef }) {
                 }
             });
 
+            // Handle intro screen
+            if (
+                currentFragmentIndex === 0 &&
+                introGroupRef?.current?.children
+            ) {
+                handleIntro(
+                    timelineProgressPerFragment[currentFragmentIndex],
+                    introGroupRef.current
+                );
+            }
+
+            // Ervoor zorgen dat de text altijd naar jou kijkt
+            if (textGroupRef.current) {
+                textGroupRef.current.lookAt(camera.position);
+            }
+
             if (
                 // Als alle animaties zijn afgelopen of nog niet begonnen, dan doen we niks
                 !timelineProgressPerFragment.every((r) => r === 0) ||
@@ -122,29 +75,34 @@ export function MyScene({ canvasRef }) {
                 applyAnimationToTimelineLine(
                     camera,
                     timelineProgressPerFragment[currentFragmentIndex],
-                    timelineFragments[currentFragmentIndex]
+                    timelineFragments[currentFragmentIndex],
+                    textGroupRef.current
                 );
+                // Kijk of er ook nog text is dat aangepast moet worden
+                if (
+                    timelineFragments[currentFragmentIndex]?.text?.content &&
+                    currentText !==
+                        timelineFragments[currentFragmentIndex].text.content
+                ) {
+                    setCurrentText(
+                        timelineFragments[currentFragmentIndex].text.content
+                    );
+                }
                 // Voeg muis-movement toe aan camera
-                let { x, y, z } = camera.position;
-                camera.position.set(
-                    (x += mouse.x / 10),
-                    (y += mouse.y / 10),
-                    z
-                );
+                camera.translateX(mouse.x / 10);
+                camera.translateY(mouse.y / 10);
+            }
+
+            if (
+                timelineProgressPerFragment[
+                    timelineProgressPerFragment.length - 1
+                ] > 0.9
+            ) {
+                setShowOutro(true);
+            } else {
+                setShowOutro(false);
             }
         }
-    });
-    const { vec3 } = useControls({
-        vec3: {
-            x: 0,
-            y: 0,
-            z: 0,
-        },
-    });
-
-    useKey('f', () => {
-        console.log(camera.position);
-        console.log(camera.rotation);
     });
 
     useKey('o', () => {
@@ -156,28 +114,75 @@ export function MyScene({ canvasRef }) {
 
     useEffect(() => {
         // handig voor orbitcontrols
-        console.log('OBC = ' + orbitControlsVis);
+        console.log('Orbit Controls = ' + orbitControlsVis);
     }, [orbitControlsVis]);
-
-    useEffect(() => {
-        // handig voor positionering
-        console.log(vec3);
-    }, [vec3]);
 
     return (
         <>
             {orbitControlsVis && <OrbitControls />}
-            {/* <axesHelper size={40} /> */}
-            {/* <gridHelper /> */}
-            <mesh position={Object.values(vec3)}>
-                <boxBufferGeometry />
-                <meshStandardMaterial color={'red'} />
-            </mesh>
             <Suspense fallback={null}>
+                <group ref={introGroupRef}>
+                    <Text
+                        fillOpacity={0}
+                        position={[
+                            3.287051563715002, 0.7618830587647809,
+                            1.8792822437156245,
+                        ]}
+                        font="font/Fruktur-Regular.ttf"
+                        color="white"
+                        anchorX="center"
+                        anchorY="middle"
+                        fontSize={0.15}
+                        outlineBlur={0.05}
+                    >
+                        The Warrior
+                    </Text>
+                    <Text
+                        fillOpacity={0}
+                        position={[
+                            3.287051563715002, 0.5618830587647809,
+                            1.8792822437156245,
+                        ]}
+                        font="font/Fruktur-Regular.ttf"
+                        color="white"
+                        anchorX="center"
+                        anchorY="middle"
+                        fontSize={0.1}
+                        outlineBlur={0.05}
+                    >
+                        A Short Story
+                    </Text>
+                    <Text
+                        fillOpacity={0}
+                        position={[
+                            3.287051563715002, 0.3618830587647809,
+                            1.8792822437156245,
+                        ]}
+                        font="font/Fruktur-Regular.ttf"
+                        color="#d8cf25"
+                        anchorX="center"
+                        anchorY="middle"
+                        fontSize={0.1}
+                        outlineBlur={0.05}
+                    >
+                        By Level30Wizards
+                    </Text>
+                </group>
+                <group ref={textGroupRef}>
+                    <Text
+                        font="font/Fruktur-Regular.ttf"
+                        color="brown"
+                        anchorX="center"
+                        anchorY="middle"
+                        fontSize={0.3}
+                        outlineBlur={0.05}
+                    >
+                        {currentText}
+                    </Text>
+                </group>
                 <Island />
             </Suspense>
-            <ambientLight args={[0xff0000]} intensity={0.1} />
-            <directionalLight position={[0, 0, 5]} intensity={0.5} />)
+            )
         </>
     );
 }

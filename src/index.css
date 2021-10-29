@@ -1,0 +1,29 @@
+#outro > div {
+    opacity: 0;
+    transition: opacity 1s ease-out;
+    z-index: 1;
+    position: fixed;
+    margin-left: 1rem;
+    font-family: sans-serif;
+}
+
+#outro.visible > div {
+    opacity: 1;
+}
+
+a {
+    color: #3466bf;
+    text-decoration: none;
+}
+
+div > p:first-child {
+    font-size: 1.75rem;
+    line-height: 0;
+    color: #d8cf25;
+    font-family: MyWebFont;
+    text-shadow: 2px 2px black;
+}
+
+#controls {
+    bottom: 0;
+}

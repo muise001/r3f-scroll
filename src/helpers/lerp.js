@@ -1,20 +1,35 @@
 export const applyAnimationToTimelineLine = (
     camera,
     animationProgress,
-    fragment
+    fragment,
+    textGroupRef
 ) => {
-    if (fragment.position) {
+    if (fragment?.position) {
         camera.position.set(...lerpPos(fragment.position, animationProgress));
     }
-    if (fragment.lookAt) {
+    if (fragment?.lookAt) {
         camera.lookAt(...lerpPos(fragment.lookAt, animationProgress));
+    }
+    if (fragment?.text?.position && textGroupRef) {
+        textGroupRef.position.set(
+            ...lerpPos(fragment.text.position, animationProgress)
+        );
     }
 };
 
-function lerpPos(fragment, animationProgress) {
+function lerpPos([start, end], animationProgress) {
     return [
-        fragment[0].x + (fragment[1].x - fragment[0].x) * animationProgress,
-        fragment[0].y + (fragment[1].y - fragment[0].y) * animationProgress,
-        fragment[0].z + (fragment[1].z - fragment[0].z) * animationProgress,
+        start.x + (end.x - start.x) * animationProgress,
+        start.y + (end.y - start.y) * animationProgress,
+        start.z + (end.z - start.z) * animationProgress,
     ];
 }
+
+export const handleIntro = (percentage, introGroup) => {
+    if (percentage < 1 && introGroup?.children) {
+        introGroup.children[0].fillOpacity = 0 + 3 * percentage;
+        introGroup.children[1].fillOpacity = -1 + 3 * percentage;
+        introGroup.children[2].fillOpacity = -1.1 + 3 * percentage;
+        introGroup.position.setZ(-2 + 3 * percentage);
+    }
+};
